@@ -7,7 +7,7 @@ We will use:
 1. API Gateway: Serves as the entry point for the frontend, directing HTTP requests to the appropriate Lambda functions.
 2. Lambda Functions: Handle business logic, including listing photos, uploading new photos to S3, and deleting photos.
 3. DynamoDB: Stores metadata about each photo, such as filenames, descriptions, and timestamps.
-4. S3: Stores the actual photo files uploaded by users.
+
 
 ## Prerequisites
 
@@ -52,11 +52,13 @@ This Lambda function simulates uploading a photo's metadata to DynamoDB. The act
 
 ```
 const AWS = require('aws-sdk');
-const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localhost:4566' });
+const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localstack:4566' });
 
 exports.handler = async (event) => {
-    const photoId = event.photoId; // Assume photoId is passed in the event
-    const description = event.description; // Assume description is also passed in the event
+    // When invoked via API Gateway, the event body is a JSON string
+    const body = JSON.parse(event.body);
+    const photoId = body.photoId;
+    const description = body.description;
 
     const params = {
         TableName: "PhotoMetadata",
@@ -69,12 +71,21 @@ exports.handler = async (event) => {
 
     try {
         await dynamoDB.put(params).promise();
-        return { statusCode: 200, body: JSON.stringify({ message: "Photo uploaded successfully" }) };
+        return {
+            statusCode: 200,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Photo uploaded successfully" })
+        };
     } catch (error) {
         console.error(error);
-        return { statusCode: 500, body: JSON.stringify({ message: "Failed to upload photo" }) };
+        return {
+            statusCode: 500,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Failed to upload photo", error: error.toString() })
+        };
     }
 };
+
 ```
 
 listPhotos (lambda_functions/listPhotos/index.js)
@@ -82,7 +93,7 @@ This function fetches the list of photo metadata from DynamoDB.
 
 ```
 const AWS = require('aws-sdk');
-const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localhost:4566' });
+const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localstack:4566' });
 
 exports.handler = async () => {
     const params = {
@@ -91,22 +102,33 @@ exports.handler = async () => {
 
     try {
         const data = await dynamoDB.scan(params).promise();
-        return { statusCode: 200, body: JSON.stringify(data.Items) };
+        return {
+            statusCode: 200,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ photos: data.Items })
+        };
     } catch (error) {
-        console.error(error);
-        return { statusCode: 500, body: JSON.stringify({ message: "Failed to list photos" }) };
+        console.error("Error listing photos:", error);
+        return {
+            statusCode: 500,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Failed to list photos", error: error.toString() })
+        };
     }
 };
+
 ```
 deletePhoto (lambda_functions/deletePhoto/index.js)
 This function deletes a photo's metadata from DynamoDB based on photoId.
 
 ```
 const AWS = require('aws-sdk');
-const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localhost:4566' });
+const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localstack:4566' });
 
 exports.handler = async (event) => {
-    const photoId = event.photoId; // Assume photoId is passed in the event
+    // Assuming the photoId to delete is passed as a path parameter
+    const body = JSON.parse(event.body);
+    const photoId = body.photoId;
 
     const params = {
         TableName: "PhotoMetadata",
@@ -117,12 +139,21 @@ exports.handler = async (event) => {
 
     try {
         await dynamoDB.delete(params).promise();
-        return { statusCode: 200, body: JSON.stringify({ message: "Photo deleted successfully" }) };
+        return {
+            statusCode: 200,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Photo deleted successfully" })
+        };
     } catch (error) {
-        console.error(error);
-        return { statusCode: 500, body: JSON.stringify({ message: "Failed to delete photo" }) };
+        console.error("Error deleting photo:", error);
+        return {
+            statusCode: 500,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Failed to delete photo", error: error.toString() })
+        };
     }
 };
+
 ```
 
 ### Package and deploy Lambda functions
@@ -194,9 +225,11 @@ Create a POST method for each resource that integrates with the corresponding La
 
 ```
 awslocal apigateway put-method --rest-api-id <api-id> --resource-id <resource-id> --http-method POST --authorization-type NONE
+
 ```
 
 Replace <api-id> with your API ID and <resource-id> with the uploadPhoto resource ID.
+
 
 2. Set the integration:
 ```
@@ -212,6 +245,8 @@ awslocal lambda add-permission --function-name uploadPhoto --statement-id apigat
 
 Adjust the ARN with your actual API ID and correct the region and account ID as needed. LocalStack doesn't strictly enforce these, but consistency helps avoid confusion.
 
+Do the same to attach a GET Method for listPhoto and DELETE Method for deletePhoto.
+
 ### Deploy the API
 
 After setting up the methods and integrations, deploy your API to make it accessible:
@@ -225,5 +260,29 @@ The API should now be accessible at http://localhost:4566/restapis/<api-id>/dev/
 
 To Upload a Photo Metadata (using curl):
 ```
-curl -X POST "http://localhost:4566/restapis/<api-id>/dev/_user_request_/uploadPhoto" -d '{"photoId": "123", "description": "Test Photo"}'
+curl -X POST "http://localhost:4566/restapis/cswlq19eof/dev/_user_request_/uploadPhoto" -H "Content-Type: application/json" -d '{"photoId": "123", "description"
+: "test Photo"}'
 ```
+
+Test listPhoto:
+```
+curl -X GET "http://localhost:4566/restapis/cswlq19eof/dev/_user_request_/listPhoto"
+```
+
+# End of project. Final thoughts
+
+## Review of the Project. 
+
+The project now includes: 
+
+- DynamoDB Table: For storing photo metadata.
+- Lambda Functions: For uploading (uploadPhoto), listing (listPhoto), and deleting (deletePhoto) photo metadata.
+- API Gateway: To expose your Lambda functions as HTTP endpoints, making your application accessible via standard web requests.
+
+### Ideas for future enhacements:
+
+1. Frontend Development: To make our application more user-friendly, integrating a frontend using frameworks like React or Vue would be the next step.
+2. Authentication and Authorization: Implementing user authentication to secure the application and manage user-specific photo albums.
+3. Advanced Features: Exploring advanced AWS services such as S3 for direct photo storage, Cognito for user management, and CloudFront for content delivery.
+
+_I created the backend for a serverless photo album application. This project helped me understand AWS services and serverless architecture. I learned a lot about creating and deploying a cloud-native application._

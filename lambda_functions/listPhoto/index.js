@@ -1,5 +1,5 @@
 const AWS = require('aws-sdk');
-const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localhost:4566' });
+const dynamoDB = new AWS.DynamoDB.DocumentClient({ endpoint: 'http://localstack:4566' });
 
 exports.handler = async () => {
     const params = {
@@ -8,9 +8,17 @@ exports.handler = async () => {
 
     try {
         const data = await dynamoDB.scan(params).promise();
-        return { statusCode: 200, body: JSON.stringify(data.Items) };
+        return {
+            statusCode: 200,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ photos: data.Items })
+        };
     } catch (error) {
-        console.error(error);
-        return { statusCode: 500, body: JSON.stringify({ message: "Failed to list photos" }) };
+        console.error("Error listing photos:", error);
+        return {
+            statusCode: 500,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Failed to list photos", error: error.toString() })
+        };
     }
 };
