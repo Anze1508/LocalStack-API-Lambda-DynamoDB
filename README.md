@@ -7,6 +7,7 @@ We will use:
 1. API Gateway: Serves as the entry point for the frontend, directing HTTP requests to the appropriate Lambda functions.
 2. Lambda Functions: Handle business logic, including listing photos, uploading new photos to S3, and deleting photos.
 3. DynamoDB: Stores metadata about each photo, such as filenames, descriptions, and timestamps.
+4. S3: to store photos.
 
 
 ## Prerequisites
@@ -188,7 +189,7 @@ echo '{"photoId": "123", "description": "Test Photo"}' | awslocal lambda invoke 
 
 ## Step 4: API Gateway
 
-Integrating your Lambda functions with API Gateway in LocalStack allows you to create a RESTful API that can be accessed over HTTP. This setup lets you invoke your Lambda functions via standard HTTP requests, mimicking a real-world AWS environment but locally. After integrating with API Gateway, we'll test the entire setup to ensure everything works as expected. Here’s how you can proceed, step by step:
+Integrating your Lambda functions with API Gateway in LocalStack allows you to create a RESTful API that can be accessed over HTTP. This setup lets you invoke your Lambda functions via standard HTTP requests, mimicking a real-world AWS environment but locally. After integrating with API Gateway, we'll test the entire setup to ensure everything works as expected. 
 
 ### Create an API Gateway REST API
 
