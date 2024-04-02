@@ -15,7 +15,6 @@ We will use:
 - LocalStack installed and running with services: API Gateway, Lambda, S3, and DynamoDB.
 - AWS CLI installed.
 - Node.js and npm installed (for Lambda functions written in JavaScript).
-- Postman or a similar tool to test the API endpoints.
 
 ## Step 1: Create a table PhotoMetadata for storing photo metadata:
 
