@@ -13,7 +13,7 @@ We will use:
 ## Prerequisites
 
 - LocalStack installed and running with services: API Gateway, Lambda, S3, and DynamoDB.
-- AWS CLI and AWS SAM CLI installed and configured to use LocalStack. (https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+- AWS CLI installed.
 - Node.js and npm installed (for Lambda functions written in JavaScript).
 - Postman or a similar tool to test the API endpoints.
 
